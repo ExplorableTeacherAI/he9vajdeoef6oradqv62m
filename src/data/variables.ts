@@ -82,10 +82,139 @@ export interface VariableDefinition {
  */
 export const variableDefinitions: Record<string, VariableDefinition> = {
     // ========================================
-    // ADD YOUR VARIABLES HERE
+    // LESSON: Linear Feedback Shift Registers
     // ========================================
 
-    // Uncomment and modify these examples for your lesson:
+    // ── Section 2 — One Clock Tick ────────────────────────────────
+    tickFeedbackDrop: {
+        defaultValue: 'none',
+        type: 'text',
+        label: 'Feedback bit placement',
+        description: 'Which end of the register the student dropped the feedback bit into: none | left | right',
+    },
+    tickHighlight: {
+        defaultValue: '',
+        type: 'linkedHighlight',
+        label: 'Clock tick highlight',
+        description: 'Hovered element in the single-tick figure: taps | output | entry',
+        color: '#62D0AD',
+        bgColor: 'rgba(98, 208, 173, 0.20)',
+    },
+    answer_tick_feedback_bit: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Feedback bit from 1100',
+        description: 'Student answer: XOR of the tapped cells when the register holds 1100',
+        placeholder: '???',
+        correctAnswer: '0',
+        color: '#8E90F5',
+    },
+    answer_tick_next_state: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Register after the tick',
+        description: 'Student answer: the four cells after clocking 1100',
+        placeholder: '????',
+        correctAnswer: ['0110', '0 1 1 0'],
+        color: '#8E90F5',
+    },
+
+    // ── Section 3 — Reading the Output Sequence ───────────────────
+    traceSeedBits: {
+        defaultValue: [1, 0, 0, 1],
+        type: 'array',
+        label: 'Seed bits',
+        description: 'The four starting bits of the register, leftmost cell first',
+    },
+    traceTicks: {
+        defaultValue: 0,
+        type: 'number',
+        label: 'Ticks pulled',
+        description: 'How many clock ticks have been pulled out onto the output tape',
+        min: 0,
+        max: 10,
+        step: 1,
+        color: '#62D0AD',
+    },
+    traceHighlight: {
+        defaultValue: '',
+        type: 'linkedHighlight',
+        label: 'Output trace highlight',
+        description: 'Hovered element in the tracing figure: tape | exit',
+        color: '#62D0AD',
+        bgColor: 'rgba(98, 208, 173, 0.20)',
+    },
+    answer_trace_fifth_bit: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Fifth output bit',
+        description: 'Student answer: the fifth bit onto the tape from the seed 1001',
+        placeholder: '?',
+        correctAnswer: '1',
+        color: '#8E90F5',
+    },
+    answer_trace_zero_seed: {
+        defaultValue: '',
+        type: 'text',
+        label: 'First three bits from seed 1000',
+        description: 'Student answer: first three output bits when the seed is 1000',
+        placeholder: '???',
+        correctAnswer: ['000', '0 0 0'],
+        color: '#8E90F5',
+    },
+
+    // ── Section 4 — It Always Comes Back Around ───────────────────
+    cycleReveal: {
+        defaultValue: 0,
+        type: 'number',
+        label: 'Ticks revealed',
+        description: 'How far along the state trail the scrubber has been dragged',
+        min: 0,
+        max: 16,
+        step: 1,
+        color: '#62D0AD',
+    },
+    cyclePrediction: {
+        defaultValue: 6,
+        type: 'number',
+        label: 'Predicted repeat tick',
+        description: 'Where the student predicts the seed pattern will return',
+        min: 1,
+        max: 16,
+        step: 1,
+        color: '#8E90F5',
+    },
+    cycleHighlight: {
+        defaultValue: '',
+        type: 'linkedHighlight',
+        label: 'State trail highlight',
+        description: 'Hovered element in the state-trail figure: seed | repeat',
+        color: '#62D0AD',
+        bgColor: 'rgba(98, 208, 173, 0.20)',
+    },
+    answer_period_length: {
+        defaultValue: '',
+        type: 'text',
+        label: 'Longest run from five cells',
+        description: 'Student answer: the longest sequence a five-cell register could produce',
+        placeholder: '??',
+        correctAnswer: '31',
+        color: '#8E90F5',
+    },
+    answer_period_character: {
+        defaultValue: '',
+        type: 'select',
+        label: 'Character of the output',
+        description: 'Student answer: how the output stream is best described',
+        placeholder: '???',
+        options: [
+            'truly random and never repeating',
+            'repeating with a fixed period',
+            'the same bit forever',
+        ],
+        correctAnswer: 'repeating with a fixed period',
+        color: '#8E90F5',
+    },
 
     /*
     // ─────────────────────────────────────────

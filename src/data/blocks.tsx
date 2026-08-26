@@ -84,6 +84,16 @@ initializeVariableColors(variableDefinitions);
  * check your .env file and set VITE_SHOW_EXAMPLES=false.
  */
 
+import { lfsrIntroBlocks } from "./sections/lfsrIntro";
+import { lfsrOneClockTickBlocks } from "./sections/lfsrOneClockTick";
+import { lfsrOutputSequenceBlocks } from "./sections/lfsrOutputSequence";
+import { lfsrPeriodBlocks } from "./sections/lfsrPeriod";
+import { lfsrWrapUpBlocks } from "./sections/lfsrWrapUp";
+
 export const blocks: ReactElement[] = [
-    // Start adding your blocks here!
+    ...lfsrIntroBlocks,
+    ...lfsrOneClockTickBlocks,
+    ...lfsrOutputSequenceBlocks,
+    ...lfsrPeriodBlocks,
+    ...lfsrWrapUpBlocks,
 ];
