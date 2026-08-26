@@ -34,14 +34,14 @@ import {
 // ── View geometry ───────────────────────────────────────────────────────────
 
 const VIEW_WIDTH = 560;
-const VIEW_HEIGHT = 320;
+const VIEW_HEIGHT = 344;
 
 const MAX_TICKS = 10;
 
 const REG_LEFT = 46;
 const REG_PITCH = 46;
 const REG_CELL = 40;
-const REG_TOP = 92;
+const REG_TOP = 84;
 const REG_MID = REG_TOP + REG_CELL / 2;
 
 /** Centre x of register slot `v` (0 = feedback entry, 1..4 = cells, 5 = exit). */
@@ -50,12 +50,24 @@ const regX = (v: number): number => REG_LEFT + v * REG_PITCH + REG_CELL / 2;
 const TAPE_LEFT = 44;
 const TAPE_PITCH = 46;
 const TAPE_CELL = 34;
-const TAPE_TOP = 232;
+const TAPE_TOP = 250;
+const TAPE_MID = TAPE_TOP + TAPE_CELL / 2;
 const tapeX = (index: number): number => TAPE_LEFT + index * TAPE_PITCH + TAPE_CELL / 2;
 
-const XOR_CENTRE = { x: 200, y: 176 };
+const XOR_CENTRE = { x: 227, y: 48 };
 
 const DEFAULT_SEED: Bits = [1, 0, 0, 1];
+
+type Point = { x: number; y: number };
+
+/** Point on the quadratic chute that carries the bit from the exit to the tape. */
+const chutePoint = (t: number, from: Point, control: Point, to: Point): Point => {
+    const inv = 1 - t;
+    return {
+        x: inv * inv * from.x + 2 * inv * t * control.x + t * t * to.x,
+        y: inv * inv * from.y + 2 * inv * t * control.y + t * t * to.y,
+    };
+};
 
 // ── The bespoke drawing ─────────────────────────────────────────────────────
 
@@ -88,6 +100,7 @@ function OutputTraceDrawing() {
     const current = states[step];
     const feedback = feedbackBit(current);
     const tape = outputsFrom(seed, MAX_TICKS);
+    const leaving = current[3];
 
     const opacityFor = (id: string) => (highlight && highlight !== id ? 0.38 : 1);
     const isOn = (id: string) => highlight === id;
@@ -132,8 +145,23 @@ function OutputTraceDrawing() {
         setRaw(null);
     };
 
-    const handleGrabX = regX(4 + frac);
+    // The chute: from the register's exit down to the slot this bit will fill.
+    const chuteFrom: Point = { x: regX(5), y: REG_MID };
+    const chuteTo: Point = { x: tapeX(step), y: TAPE_MID };
+    const chuteControl: Point = {
+        x: chuteFrom.x - (chuteFrom.x - chuteTo.x) * 0.35,
+        y: 215,
+    };
+    const chutePath = `M ${chuteFrom.x} ${chuteFrom.y} Q ${chuteControl.x} ${chuteControl.y} ${chuteTo.x} ${chuteTo.y}`;
+
+    // The bit on its way out: along the register first, then down the chute.
+    const token =
+        frac <= 0.5
+            ? { x: regX(4 + frac * 2), y: REG_MID }
+            : chutePoint((frac - 0.5) * 2, chuteFrom, chuteControl, chuteTo);
+
     const revealed = Math.round(position);
+    const grabbable = position < MAX_TICKS;
 
     return (
         <svg
@@ -141,82 +169,126 @@ function OutputTraceDrawing() {
             viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
             className="block w-full"
             role="img"
-            aria-label="A four cell shift register above a tape collecting its output bits"
+            aria-label="A four cell shift register whose output bits drop onto a tape below"
         >
             <defs>
                 <filter id="lfsr-trace-shadow" x="-50%" y="-50%" width="200%" height="200%">
                     <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#0F172A" floodOpacity="0.25" />
                 </filter>
+                <marker id="lfsr-trace-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                    <path d="M 0 1 L 9 5 L 0 9 z" fill={INK_QUIET} />
+                </marker>
+                <marker id="lfsr-trace-arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                    <path d="M 0 1 L 9 5 L 0 9 z" fill={ACCENT} />
+                </marker>
             </defs>
 
             {/* Readouts above the drawing surface */}
-            <g fontSize="12" style={{ fontVariantNumeric: "tabular-nums" }} opacity={opacityFor("seedRow")}>
-                <text x="24" y="46" fill={INK}>{`seed ${bitsToString(seed)}`}</text>
-                <text x={VIEW_WIDTH - 24} y="46" fill={INK} textAnchor="end">
-                    {`ticks pulled ${revealed}`}
+            <g fontSize="12" style={{ fontVariantNumeric: "tabular-nums" }} opacity={opacityFor("readout")}>
+                <text x="24" y="28" fill={INK}>{`seed ${bitsToString(seed)}`}</text>
+                <text x={VIEW_WIDTH - 24} y="28" fill={INK} textAnchor="end">
+                    {`bits pulled ${revealed}`}
                 </text>
             </g>
 
-            {/* Feedback entry slot */}
-            <rect
-                x={regX(0) - REG_CELL / 2}
-                y={REG_TOP}
-                width={REG_CELL}
-                height={REG_CELL}
-                rx="6"
-                fill="#FFFFFF"
-                stroke={INK_QUIET}
-                strokeWidth="2"
-                strokeDasharray="5 5"
-                opacity={opacityFor("register")}
-                style={ease}
-            />
-            <text
-                x={regX(0)}
-                y={REG_TOP - 12}
-                fill={INK}
-                fontSize="11"
-                textAnchor="middle"
-                opacity={opacityFor("register")}
-                style={ease}
-            >
-                feedback
-            </text>
-
-            {/* The four cells — click one to flip that bit of the seed */}
-            {[1, 2, 3, 4].map((cellIndex) => (
-                <g key={cellIndex} opacity={opacityFor("register")} style={ease}>
-                    <rect
-                        x={regX(cellIndex) - REG_CELL / 2}
-                        y={REG_TOP}
-                        width={REG_CELL}
-                        height={REG_CELL}
-                        rx="6"
-                        fill="#FFFFFF"
-                        stroke={INK_STRUCTURE}
-                        strokeWidth="2"
-                        style={{ cursor: "pointer" }}
-                        onClick={() => flipSeedBit(cellIndex - 1)}
-                    />
-                    <text x={regX(cellIndex)} y={REG_TOP - 12} fill={INK} fontSize="11" textAnchor="middle">
-                        {`cell ${cellIndex}`}
-                    </text>
-                </g>
-            ))}
-
-            {/* Exit slot */}
-            <g opacity={opacityFor("exit")} style={ease} {...hoverProps("exit")}>
-                {isOn("exit") && (
-                    <rect
-                        x={regX(5) - REG_CELL / 2 - 3}
-                        y={REG_TOP - 3}
-                        width={REG_CELL + 6}
-                        height={REG_CELL + 6}
-                        rx="9"
+            {/* Feedback loop over the top: taps into the XOR gate, result back to cell 1 */}
+            <g opacity={opacityFor("feedback")} style={ease} {...hoverProps("feedback")}>
+                {isOn("feedback") && (
+                    <path
+                        d={`M ${regX(3)} ${REG_TOP} V 68 H ${XOR_CENTRE.x} M ${regX(4)} ${REG_TOP} V 68 H ${XOR_CENTRE.x} M ${XOR_CENTRE.x} 68 V ${XOR_CENTRE.y + 13}`}
                         fill="none"
                         stroke={INK_STRUCTURE}
                         strokeWidth="9"
                         opacity="0.28"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                )}
+                <path
+                    d={`M ${regX(3)} ${REG_TOP} V 68 H ${XOR_CENTRE.x} M ${regX(4)} ${REG_TOP} V 68 H ${XOR_CENTRE.x} M ${XOR_CENTRE.x} 68 V ${XOR_CENTRE.y + 13}`}
+                    fill="none"
+                    stroke={INK_STRUCTURE}
+                    strokeWidth={isOn("feedback") ? 3 : 2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+                <circle cx={regX(3)} cy={REG_TOP} r="3.5" fill={INK_STRUCTURE} />
+                <circle cx={regX(4)} cy={REG_TOP} r="3.5" fill={INK_STRUCTURE} />
+                <text x="190" y="64" fill={INK} fontSize="10" textAnchor="end">
+                    taps
+                </text>
+                <circle cx={XOR_CENTRE.x} cy={XOR_CENTRE.y} r="13" fill="#FFFFFF" stroke={INK_STRUCTURE} strokeWidth="2" />
+                <path
+                    d={`M ${XOR_CENTRE.x - 7} ${XOR_CENTRE.y} H ${XOR_CENTRE.x + 7} M ${XOR_CENTRE.x} ${XOR_CENTRE.y - 7} V ${XOR_CENTRE.y + 7}`}
+                    stroke={INK_STRUCTURE}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                />
+                <text
+                    x={XOR_CENTRE.x + 22}
+                    y={XOR_CENTRE.y + 4}
+                    fill={INK}
+                    fontSize="12"
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                    {`${current[2]} XOR ${current[3]} = ${feedback}`}
+                </text>
+                <path
+                    d={`M ${XOR_CENTRE.x - 13} ${XOR_CENTRE.y} H ${regX(0)} V ${REG_TOP - 6}`}
+                    fill="none"
+                    stroke={ACCENT}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    markerEnd="url(#lfsr-trace-arrow-accent)"
+                />
+            </g>
+
+            {/* Feedback entry slot */}
+            <g opacity={opacityFor("register")} style={ease}>
+                <rect
+                    x={regX(0) - REG_CELL / 2}
+                    y={REG_TOP}
+                    width={REG_CELL}
+                    height={REG_CELL}
+                    rx="6"
+                    fill="#FFFFFF"
+                    stroke={INK_QUIET}
+                    strokeWidth="2"
+                    strokeDasharray="5 5"
+                />
+                <text x={regX(0)} y={REG_TOP + REG_CELL + 16} fill={INK} fontSize="11" textAnchor="middle">
+                    next bit in
+                </text>
+            </g>
+
+            {/* The four cells — click one to flip that bit of the seed */}
+            {[1, 2, 3, 4].map((cellIndex) => (
+                <rect
+                    key={cellIndex}
+                    x={regX(cellIndex) - REG_CELL / 2}
+                    y={REG_TOP}
+                    width={REG_CELL}
+                    height={REG_CELL}
+                    rx="6"
+                    fill="#FFFFFF"
+                    stroke={INK_STRUCTURE}
+                    strokeWidth="2"
+                    opacity={opacityFor("register")}
+                    style={{ ...ease, cursor: "pointer" }}
+                    onClick={() => flipSeedBit(cellIndex - 1)}
+                />
+            ))}
+            {/* Exit slot and the chute down to the tape */}
+            <g opacity={opacityFor("exit")} style={ease} {...hoverProps("exit")}>
+                {isOn("exit") && (
+                    <path
+                        d={chutePath}
+                        fill="none"
+                        stroke={ACCENT}
+                        strokeWidth="9"
+                        opacity="0.28"
+                        strokeLinecap="round"
                     />
                 )}
                 <rect
@@ -226,44 +298,26 @@ function OutputTraceDrawing() {
                     height={REG_CELL}
                     rx="6"
                     fill="#FFFFFF"
-                    stroke={INK_STRUCTURE}
+                    stroke={INK_QUIET}
                     strokeWidth={isOn("exit") ? 3 : 2}
                     strokeDasharray="5 5"
                 />
-                <text x={regX(5)} y={REG_TOP - 12} fill={INK} fontSize="11" textAnchor="middle">
+                <text x={regX(5)} y={REG_TOP - 14} fill={INK} fontSize="11" textAnchor="middle">
                     output
                 </text>
-            </g>
-
-            {/* Tap wires and the XOR gate */}
-            <g opacity={opacityFor("register")} style={ease}>
                 <path
-                    d={`M ${regX(3)} ${REG_TOP + REG_CELL} V 158 H ${XOR_CENTRE.x} M ${regX(4)} ${REG_TOP + REG_CELL} V 158 H ${XOR_CENTRE.x} M ${XOR_CENTRE.x} 158 V ${XOR_CENTRE.y - 14}`}
+                    d={chutePath}
                     fill="none"
-                    stroke={INK_STRUCTURE}
-                    strokeWidth="2"
+                    stroke={isOn("exit") ? ACCENT : INK_QUIET}
+                    strokeWidth={isOn("exit") ? 3 : 2}
+                    strokeDasharray="6 6"
                     strokeLinecap="round"
-                    strokeLinejoin="round"
-                />
-                <circle cx={XOR_CENTRE.x} cy={XOR_CENTRE.y} r="14" fill="#FFFFFF" stroke={INK_STRUCTURE} strokeWidth="2" />
-                <path
-                    d={`M ${XOR_CENTRE.x - 7} ${XOR_CENTRE.y} H ${XOR_CENTRE.x + 7} M ${XOR_CENTRE.x} ${XOR_CENTRE.y - 7} V ${XOR_CENTRE.y + 7}`}
-                    stroke={INK_STRUCTURE}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                />
-                <path
-                    d={`M ${XOR_CENTRE.x - 14} ${XOR_CENTRE.y} H ${regX(0)} V ${REG_TOP + REG_CELL + 6}`}
-                    fill="none"
-                    stroke={ACCENT}
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    markerEnd={isOn("exit") ? "url(#lfsr-trace-arrow-accent)" : "url(#lfsr-trace-arrow)"}
                 />
             </g>
 
-            {/* The four bits in the register, sliding one slot per tick */}
-            {current.map((bit, index) => (
+            {/* The three bits that stay in the register, sliding one place right */}
+            {[0, 1, 2].map((index) => (
                 <text
                     key={`bit-${index}`}
                     x={regX(index + 1 + frac)}
@@ -271,14 +325,14 @@ function OutputTraceDrawing() {
                     fill={INK}
                     fontSize="20"
                     textAnchor="middle"
-                    opacity={(index === 3 ? 1 - frac * 0.8 : 1) * opacityFor(index === 3 ? "exit" : "register")}
+                    opacity={opacityFor("register")}
                     style={{ ...ease, fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}
                 >
-                    {bit}
+                    {current[index]}
                 </text>
             ))}
 
-            {/* The feedback bit entering from the left — the accent element */}
+            {/* The bit the XOR gate is sending back in — the accent element */}
             <g opacity={opacityFor("register")} style={ease}>
                 <rect
                     x={regX(frac) - 15}
@@ -287,7 +341,7 @@ function OutputTraceDrawing() {
                     height="30"
                     rx="6"
                     fill={ACCENT}
-                    opacity={0.25 + 0.75 * frac}
+                    opacity={0.3 + 0.7 * frac}
                 />
                 <text
                     x={regX(frac)}
@@ -295,62 +349,27 @@ function OutputTraceDrawing() {
                     fill="#FFFFFF"
                     fontSize="18"
                     textAnchor="middle"
-                    opacity={0.25 + 0.75 * frac}
-                    style={{ fontVariantNumeric: "tabular-nums" }}
+                    opacity={0.3 + 0.7 * frac}
+                    style={{ fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}
                 >
                     {feedback}
                 </text>
             </g>
 
-            {/* The grab handle: the bit on its way out of cell 4 */}
-            {position < MAX_TICKS && (
-                <>
-                    <rect
-                        x={handleGrabX - 21}
-                        y={REG_MID - 21}
-                        width="42"
-                        height="42"
-                        rx="8"
-                        fill="none"
-                        stroke={ACCENT}
-                        strokeWidth={drag || hovered ? 3.5 : 2.5}
-                        filter={drag || hovered ? "url(#lfsr-trace-shadow)" : undefined}
-                        style={{ transition: "stroke-width 150ms ease-out", pointerEvents: "none" }}
-                        opacity={opacityFor("exit")}
-                    />
-                    <rect
-                        x={handleGrabX - 24}
-                        y={REG_MID - 24}
-                        width="48"
-                        height="48"
-                        fill="transparent"
-                        style={{ cursor: drag ? "grabbing" : "grab", touchAction: "none" }}
-                        onPointerDown={handlePointerDown}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerCancel={handlePointerUp}
-                        onPointerEnter={() => setHovered(true)}
-                        onPointerLeave={() => setHovered(false)}
-                    />
-                </>
-            )}
-
             {/* The output tape */}
             <g opacity={opacityFor("tape")} style={ease} {...hoverProps("tape")}>
-                <text x={TAPE_LEFT} y={TAPE_TOP - 14} fill={INK} fontSize="11">
-                    output so far, oldest bit first
-                </text>
                 {tape.map((bit, index) => {
-                    const filled = index < step ? 1 : index === step ? frac : 0;
+                    const filled = index < step;
+                    const isTarget = index === step;
                     return (
                         <g key={`tape-${index}`}>
-                            {isOn("tape") && filled > 0.5 && (
+                            {isOn("tape") && filled && (
                                 <rect
-                                    x={tapeX(index) - TAPE_CELL / 2 - 3}
-                                    y={TAPE_TOP - 3}
-                                    width={TAPE_CELL + 6}
-                                    height={TAPE_CELL + 6}
-                                    rx="9"
+                                    x={tapeX(index) - TAPE_CELL / 2 - 4}
+                                    y={TAPE_TOP - 4}
+                                    width={TAPE_CELL + 8}
+                                    height={TAPE_CELL + 8}
+                                    rx="8"
                                     fill="none"
                                     stroke={INK_STRUCTURE}
                                     strokeWidth="9"
@@ -364,28 +383,30 @@ function OutputTraceDrawing() {
                                 height={TAPE_CELL}
                                 rx="5"
                                 fill="#FFFFFF"
-                                stroke={filled > 0.5 ? INK_STRUCTURE : INK_QUIET}
-                                strokeWidth={filled > 0.5 && isOn("tape") ? 3 : 2}
-                                strokeDasharray={filled > 0.5 ? undefined : "4 4"}
+                                stroke={filled ? INK_STRUCTURE : isTarget ? ACCENT : INK_QUIET}
+                                strokeWidth={filled && isOn("tape") ? 3 : 2}
+                                strokeDasharray={filled ? undefined : "4 4"}
+                                opacity={filled || isTarget ? 1 : 0.55}
                             />
+                            {filled && (
+                                <text
+                                    x={tapeX(index)}
+                                    y={TAPE_TOP + 24}
+                                    fill={INK}
+                                    fontSize="18"
+                                    textAnchor="middle"
+                                    style={{ fontVariantNumeric: "tabular-nums" }}
+                                >
+                                    {bit}
+                                </text>
+                            )}
                             <text
                                 x={tapeX(index)}
-                                y={TAPE_TOP + 24}
-                                fill={INK}
-                                fontSize="18"
-                                textAnchor="middle"
-                                opacity={filled}
-                                style={{ fontVariantNumeric: "tabular-nums" }}
-                            >
-                                {bit}
-                            </text>
-                            <text
-                                x={tapeX(index)}
-                                y={TAPE_TOP + TAPE_CELL + 20}
+                                y={TAPE_TOP + TAPE_CELL + 18}
                                 fill={INK_STRUCTURE}
                                 fontSize="10"
                                 textAnchor="middle"
-                                opacity={filled > 0.5 ? 1 : 0.5}
+                                opacity={filled ? 1 : 0.5}
                                 style={{ fontVariantNumeric: "tabular-nums" }}
                             >
                                 {index + 1}
@@ -393,7 +414,54 @@ function OutputTraceDrawing() {
                         </g>
                     );
                 })}
+                <text x={VIEW_WIDTH / 2} y={TAPE_TOP + TAPE_CELL + 36} fill={INK} fontSize="11" textAnchor="middle">
+                    output sequence, tick by tick
+                </text>
             </g>
+
+            {/* The bit being pulled out: the grab handle, and the same token that lands */}
+            {grabbable && (
+                <>
+                    <g opacity={opacityFor("exit")} style={ease}>
+                        <rect
+                            x={token.x - 16}
+                            y={token.y - 16}
+                            width="32"
+                            height="32"
+                            rx="7"
+                            fill="#FFFFFF"
+                            stroke={ACCENT}
+                            strokeWidth={drag || hovered ? 3.5 : 2.5}
+                            filter="url(#lfsr-trace-shadow)"
+                            style={{ transition: "stroke-width 150ms ease-out", pointerEvents: "none" }}
+                        />
+                        <text
+                            x={token.x}
+                            y={token.y + 7}
+                            fill={INK}
+                            fontSize="19"
+                            textAnchor="middle"
+                            style={{ fontVariantNumeric: "tabular-nums", pointerEvents: "none" }}
+                        >
+                            {leaving}
+                        </text>
+                    </g>
+                    <rect
+                        x={token.x - 24}
+                        y={token.y - 24}
+                        width="48"
+                        height="48"
+                        fill="transparent"
+                        style={{ cursor: drag ? "grabbing" : "grab", touchAction: "none" }}
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerCancel={handlePointerUp}
+                        onPointerEnter={() => setHovered(true)}
+                        onPointerLeave={() => setHovered(false)}
+                    />
+                </>
+            )}
         </svg>
     );
 }
@@ -408,7 +476,7 @@ function OutputTraceFigure() {
                 setVar("traceTicks", 0);
                 setVar("traceHighlight", "");
             }}
-            caption="Grab the bit in cell 4 and pull it to the right to clock the register once. Click any cell to flip that bit of the seed and start the tape again."
+            caption="Cells 3 and 4 feed the XOR gate, and its answer waits at the left-hand end. Pull the teal bit out of cell 4: it drops down the dashed chute onto the tape while everything else shifts one place right. Click any cell to change the seed."
         >
             <OutputTraceDrawing />
             <InteractionHintSequence
@@ -416,8 +484,8 @@ function OutputTraceFigure() {
                 steps={[
                     {
                         gesture: "drag-horizontal",
-                        label: "Pull the bit out of cell 4",
-                        position: { x: "47%", y: "36%" },
+                        label: "Pull the teal bit out of cell 4",
+                        position: { x: "45%", y: "30%" },
                         dragPath: {
                             type: "line",
                             startOffset: { x: -12, y: 0 },
@@ -453,8 +521,8 @@ export const lfsrOutputSequenceBlocks: ReactElement[] = [
                 >
                     it leaves the register
                 </InlineLinkedHighlight>
-                , lands on the tape below, and everything else slides across behind it. Click any
-                cell to flip that bit of the seed and start again.
+                , drops down the dashed chute onto the tape, and everything else slides one place
+                behind it. Click any cell to flip that bit of the seed and start again.
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -536,12 +604,12 @@ export const lfsrOutputSequenceBlocks: ReactElement[] = [
                             {
                                 gesture: "click",
                                 label: "Click cell 4 so the seed reads 1000",
-                                position: { x: "45%", y: "36%" },
+                                position: { x: "45%", y: "30%" },
                             },
                             {
                                 gesture: "drag-horizontal",
                                 label: "Pull three bits out and read the tape",
-                                position: { x: "47%", y: "36%" },
+                                position: { x: "45%", y: "30%" },
                                 completionVar: "traceTicks",
                                 completionValue: 3,
                                 completionTolerance: 0,
