@@ -484,7 +484,7 @@ function OutputTraceFigure() {
                 steps={[
                     {
                         gesture: "drag-horizontal",
-                        label: "Pull the teal bit out of cell 4",
+                        label: "Drag the teal bit in cell 4 to the right",
                         position: { x: "45%", y: "30%" },
                         dragPath: {
                             type: "line",
@@ -510,19 +510,21 @@ export const lfsrOutputSequenceBlocks: ReactElement[] = [
     <StackLayout key="layout-lfsr-trace-setup" maxWidth="xl">
         <Block id="lfsr-trace-setup" padding="sm">
             <EditableParagraph id="para-lfsr-trace-setup" blockId="lfsr-trace-setup">
-                One tick gives one output bit. Repeat the tick and those bits line up into a
-                sequence, which is all a pseudo-random bit stream really is. Grab the bit sitting in
-                cell 4 and pull it to the right:{" "}
+                One tick gives one output bit, and repeating the tick lines those bits up into a
+                sequence, which is all a pseudo-random stream really is. Try a tick now: the
+                teal-ringed bit in cell 4, the last box of the register, is the one about to leave.
+                Drag it to the right and it{" "}
                 <InlineLinkedHighlight
                     id="link-lfsr-trace-exit"
                     varName="traceHighlight"
                     highlightId="exit"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("traceHighlight"))}
                 >
-                    it leaves the register
-                </InlineLinkedHighlight>
-                , drops down the dashed chute onto the tape, and everything else slides one place
-                behind it. Click any cell to flip that bit of the seed and start again.
+                    rides the dashed chute
+                </InlineLinkedHighlight>{" "}
+                down into slot 1 of the tape, while the other three bits shift along behind it. Now
+                pull four more, reading the XOR line above the register each time to see where the
+                bit coming in was made.
             </EditableParagraph>
         </Block>
     </StackLayout>,
@@ -552,8 +554,7 @@ export const lfsrOutputSequenceBlocks: ReactElement[] = [
                 />{" "}
                 bits so far. The first four carry no new information: that is the seed itself
                 walking out, right-hand cell first. Only from the fifth tick does the XOR gate
-                contribute bits the seed never held, and that is where the stream stops being
-                readable by eye.
+                contribute bits the seed never held. Click any cell to try a different seed.
             </EditableParagraph>
         </Block>
     </StackLayout>,
