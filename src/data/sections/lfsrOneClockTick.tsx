@@ -6,17 +6,26 @@ import {
     EditableParagraph,
     InlineClozeInput,
     InlineFeedback,
+    InlineFormula,
     InlineLinkedHighlight,
+    InlineSpotColor,
+    InlineTooltip,
     InteractionHintSequence,
 } from "@/components/atoms";
 import { Figure } from "@/components/molecules";
 import { useVar, useSetVar } from "@/stores";
 import { useSpring } from "@/lib/motion";
 import {
-    ACCENT,
+    FEEDBACK_HUE,
     INK,
     INK_QUIET,
     INK_STRUCTURE,
+    OUTPUT_HUE,
+    OUTPUT_SOFT,
+    TAP_HUE,
+    TAP_SOFT,
+    TOOLTIP_HUE,
+    TOOLTIP_SOFT,
     feedbackBit,
     nextState,
     outputBit,
@@ -26,6 +35,7 @@ import {
     clozePropsFromDefinition,
     getVariableInfo,
     linkedHighlightPropsFromDefinition,
+    spotColorPropsFromDefinition,
 } from "../variables";
 
 // ── View geometry (safe viewBox, ≥24px padding on all sides) ────────────────
@@ -185,7 +195,7 @@ function ClockTickDrawing() {
                         height={CELL_SIZE + 6}
                         rx="9"
                         fill="none"
-                        stroke={INK_STRUCTURE}
+                        stroke={OUTPUT_HUE}
                         strokeWidth="9"
                         opacity="0.28"
                     />
@@ -197,7 +207,7 @@ function ClockTickDrawing() {
                     height={CELL_SIZE}
                     rx="6"
                     fill="#FFFFFF"
-                    stroke={INK_STRUCTURE}
+                    stroke={dropped ? OUTPUT_HUE : INK_STRUCTURE}
                     strokeWidth={isOn("output") ? 3 : 2}
                     strokeDasharray="5 5"
                 />
@@ -223,7 +233,7 @@ function ClockTickDrawing() {
                                 height={CELL_SIZE + 6}
                                 rx="9"
                                 fill="none"
-                                stroke={INK_STRUCTURE}
+                                stroke={TAP_HUE}
                                 strokeWidth="9"
                                 opacity="0.28"
                             />
@@ -235,7 +245,7 @@ function ClockTickDrawing() {
                             height={CELL_SIZE}
                             rx="6"
                             fill="#FFFFFF"
-                            stroke={isHole ? INK_QUIET : INK_STRUCTURE}
+                            stroke={isHole ? INK_QUIET : cellIsTapped(cellIndex) ? TAP_HUE : INK_STRUCTURE}
                             strokeWidth={active && cellIsTapped(cellIndex) ? 3 : 2}
                             strokeDasharray={isHole ? "5 5" : undefined}
                         />
@@ -258,7 +268,7 @@ function ClockTickDrawing() {
                     <path
                         d={`M ${slotX(3)} ${CELL_TOP + CELL_SIZE} V 205 H ${XOR_CENTRE.x} M ${slotX(4)} ${CELL_TOP + CELL_SIZE} V 205 H ${XOR_CENTRE.x} M ${XOR_CENTRE.x} 205 V ${XOR_CENTRE.y - 16}`}
                         fill="none"
-                        stroke={INK_STRUCTURE}
+                        stroke={TAP_HUE}
                         strokeWidth="9"
                         opacity="0.28"
                         strokeLinecap="round"
@@ -268,7 +278,7 @@ function ClockTickDrawing() {
                 <path
                     d={`M ${slotX(3)} ${CELL_TOP + CELL_SIZE} V 205 H ${XOR_CENTRE.x} M ${slotX(4)} ${CELL_TOP + CELL_SIZE} V 205 H ${XOR_CENTRE.x} M ${XOR_CENTRE.x} 205 V ${XOR_CENTRE.y - 16}`}
                     fill="none"
-                    stroke={INK_STRUCTURE}
+                    stroke={TAP_HUE}
                     strokeWidth={isOn("taps") ? 3 : 2}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -305,7 +315,7 @@ function ClockTickDrawing() {
                             : `M ${XOR_CENTRE.x} ${XOR_CENTRE.y + 16} V 288 H ${slotX(5)} V ${CELL_MID + 68}`
                     }
                     fill="none"
-                    stroke={ACCENT}
+                    stroke={FEEDBACK_HUE}
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -323,11 +333,14 @@ function ClockTickDrawing() {
                         key={index}
                         x={slotX(slot)}
                         y={CELL_MID + 8}
-                        fill={INK}
+                        fill={dropped && index === bits.length - 1 ? OUTPUT_HUE : INK}
                         fontSize="22"
                         textAnchor="middle"
                         opacity={opacityFor(groupId)}
-                        style={{ ...ease, fontVariantNumeric: "tabular-nums" }}
+                        style={{
+                            transition: "opacity 150ms ease-out, fill 150ms ease-out",
+                            fontVariantNumeric: "tabular-nums",
+                        }}
                     >
                         {bit}
                     </text>
@@ -346,7 +359,7 @@ function ClockTickDrawing() {
                     width="38"
                     height="38"
                     rx="7"
-                    fill={ACCENT}
+                    fill={FEEDBACK_HUE}
                     filter="url(#lfsr-tick-chip-shadow)"
                 />
                 <text
@@ -388,7 +401,10 @@ function ClockTickDrawing() {
                     opacity={opacityFor("output")}
                     style={{ ...ease, fontVariantNumeric: "tabular-nums" }}
                 >
-                    {`output this tick: ${output}`}
+                    {"output this tick: "}
+                    <tspan fill={OUTPUT_HUE} fontWeight="700">
+                        {output}
+                    </tspan>
                 </text>
             )}
         </svg>
@@ -464,18 +480,34 @@ export const lfsrOneClockTickBlocks: ReactElement[] = [
     <StackLayout key="layout-lfsr-tick-setup" maxWidth="xl">
         <Block id="lfsr-tick-setup" padding="sm">
             <EditableParagraph id="para-lfsr-tick-setup" blockId="lfsr-tick-setup">
-                Everything the fob's register ever does happens in a single clock tick, repeated.{" "}
+                Everything the fob's register ever does happens in a single{" "}
+                <InlineTooltip
+                    id="tooltip-lfsr-tick-clock-tick"
+                    tooltip="One beat of the circuit's clock. On each beat every cell updates once, all at the same moment."
+                    color={TOOLTIP_HUE}
+                    bgColor={TOOLTIP_SOFT}
+                >
+                    clock tick
+                </InlineTooltip>
+                , repeated.{" "}
                 <InlineLinkedHighlight
                     id="link-lfsr-tick-taps"
                     varName="tickHighlight"
                     highlightId="taps"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("tickHighlight"))}
+                    color={TAP_HUE}
+                    bgColor={TAP_SOFT}
                 >
                     Two of the four cells are tapped
                 </InlineLinkedHighlight>
                 , their bits go into an XOR gate, and the result is the bit the register takes in.
-                The register below holds 1001, so the tapped cells hold 0 and 1 and the gate has
-                already produced a teal 1. Drag that bit into whichever end you think takes it, and
+                The register below holds 1001, so the tapped cells hold 0 and 1, and since{" "}
+                <InlineFormula
+                    id="formula-lfsr-tick-setup-xor"
+                    latex="\clr{tap}{0} \text{ XOR } \clr{tap}{1} = \clr{feedback}{1}"
+                    colorMap={{ tap: TAP_HUE, feedback: FEEDBACK_HUE }}
+                />{" "}
+                the gate has already produced a teal 1. Drag that bit into whichever end you think takes it, and
                 watch what the tick does to all four cells.
             </EditableParagraph>
         </Block>
@@ -497,10 +529,20 @@ export const lfsrOneClockTickBlocks: ReactElement[] = [
                     varName="tickHighlight"
                     highlightId="output"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("tickHighlight"))}
+                    color={OUTPUT_HUE}
+                    bgColor={OUTPUT_SOFT}
                 >
                     that bit is on its way out
                 </InlineLinkedHighlight>
-                , and it is the output. So feedback enters on the left, everything slides one place
+                , and it is the output. So{" "}
+                <InlineSpotColor
+                    id="spot-lfsr-tick-reflect-feedback"
+                    varName="lfsrFeedbackBit"
+                    {...spotColorPropsFromDefinition(getVariableInfo("lfsrFeedbackBit"))}
+                >
+                    feedback
+                </InlineSpotColor>{" "}
+                enters on the left, everything slides one place
                 right, and {`${TICK_SEED.join("")} becomes ${nextBits.join("")}`}.
             </EditableParagraph>
         </Block>
@@ -511,6 +553,11 @@ export const lfsrOneClockTickBlocks: ReactElement[] = [
             <EditableParagraph id="para-lfsr-tick-question-feedback" blockId="lfsr-tick-question-feedback">
                 Now clock 1100 on by hand. Its tapped cells hold 0 and 0, so the bit the XOR gate
                 sends back in is{" "}
+                <InlineFormula
+                    id="formula-lfsr-tick-question-xor"
+                    latex="\clr{tap}{0} \text{ XOR } \clr{tap}{0} ="
+                    colorMap={{ tap: TAP_HUE }}
+                />{" "}
                 <InlineFeedback
                     varName="answer_tick_feedback_bit"
                     correctValue="0"

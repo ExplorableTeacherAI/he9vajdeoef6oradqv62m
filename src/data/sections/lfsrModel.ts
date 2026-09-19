@@ -78,3 +78,20 @@ export const ACCENT = "#62D0AD";
 export const ACCENT_SOFT = "rgba(98, 208, 173, 0.15)";
 export const SECOND_ACCENT = "#8E90F5";
 export const AMBER = "#F7B23B";
+
+// ── One quantity, one hue, in every figure and every sentence ───────────────
+
+/** The bit the XOR gate sends back in at the left-hand end. */
+export const FEEDBACK_HUE = ACCENT;
+/** The bit leaving at the right-hand end, and the output sequence it builds. */
+export const OUTPUT_HUE = AMBER;
+export const OUTPUT_SOFT = "rgba(247, 178, 59, 0.20)";
+/** The tapped cells and the wires carrying their bits into the XOR gate. */
+export const TAP_HUE = "#F8A0CD";
+export const TAP_SOFT = "rgba(248, 160, 205, 0.22)";
+/** The student's own prediction. */
+export const PREDICTION_HUE = SECOND_ACCENT;
+export const PREDICTION_SOFT = "rgba(142, 144, 245, 0.20)";
+/** Blue for tooltips, so a definition never borrows a quantity's hue. */
+export const TOOLTIP_HUE = "#2563EB";
+export const TOOLTIP_SOFT = "rgba(37, 99, 235, 0.12)";

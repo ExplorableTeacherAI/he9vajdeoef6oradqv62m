@@ -8,16 +8,23 @@ import {
     InlineFeedback,
     InlineLinkedHighlight,
     InlineScrubbleNumber,
+    InlineTooltip,
+    InlineTrigger,
     InteractionHintSequence,
 } from "@/components/atoms";
 import { Figure } from "@/components/molecules";
 import { useVar, useSetVar } from "@/stores";
 import { clamp, damp, useRafLoop } from "@/lib/motion";
 import {
-    ACCENT,
+    FEEDBACK_HUE,
     INK,
     INK_QUIET,
     INK_STRUCTURE,
+    OUTPUT_HUE,
+    OUTPUT_SOFT,
+    TAP_HUE,
+    TOOLTIP_HUE,
+    TOOLTIP_SOFT,
     bitsToString,
     feedbackBit,
     outputsFrom,
@@ -179,7 +186,10 @@ function OutputTraceDrawing() {
                     <path d="M 0 1 L 9 5 L 0 9 z" fill={INK_QUIET} />
                 </marker>
                 <marker id="lfsr-trace-arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-                    <path d="M 0 1 L 9 5 L 0 9 z" fill={ACCENT} />
+                    <path d="M 0 1 L 9 5 L 0 9 z" fill={FEEDBACK_HUE} />
+                </marker>
+                <marker id="lfsr-trace-arrow-output" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                    <path d="M 0 1 L 9 5 L 0 9 z" fill={OUTPUT_HUE} />
                 </marker>
             </defs>
 
@@ -187,7 +197,10 @@ function OutputTraceDrawing() {
             <g fontSize="12" style={{ fontVariantNumeric: "tabular-nums" }} opacity={opacityFor("readout")}>
                 <text x="24" y="28" fill={INK}>{`seed ${bitsToString(seed)}`}</text>
                 <text x={VIEW_WIDTH - 24} y="28" fill={INK} textAnchor="end">
-                    {`bits pulled ${revealed}`}
+                    {"bits pulled "}
+                    <tspan fill={OUTPUT_HUE} fontWeight="700">
+                        {revealed}
+                    </tspan>
                 </text>
             </g>
 
@@ -197,7 +210,7 @@ function OutputTraceDrawing() {
                     <path
                         d={`M ${regX(3)} ${REG_TOP} V 68 H ${XOR_CENTRE.x} M ${regX(4)} ${REG_TOP} V 68 H ${XOR_CENTRE.x} M ${XOR_CENTRE.x} 68 V ${XOR_CENTRE.y + 13}`}
                         fill="none"
-                        stroke={INK_STRUCTURE}
+                        stroke={TAP_HUE}
                         strokeWidth="9"
                         opacity="0.28"
                         strokeLinecap="round"
@@ -207,13 +220,13 @@ function OutputTraceDrawing() {
                 <path
                     d={`M ${regX(3)} ${REG_TOP} V 68 H ${XOR_CENTRE.x} M ${regX(4)} ${REG_TOP} V 68 H ${XOR_CENTRE.x} M ${XOR_CENTRE.x} 68 V ${XOR_CENTRE.y + 13}`}
                     fill="none"
-                    stroke={INK_STRUCTURE}
+                    stroke={TAP_HUE}
                     strokeWidth={isOn("feedback") ? 3 : 2}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                 />
-                <circle cx={regX(3)} cy={REG_TOP} r="3.5" fill={INK_STRUCTURE} />
-                <circle cx={regX(4)} cy={REG_TOP} r="3.5" fill={INK_STRUCTURE} />
+                <circle cx={regX(3)} cy={REG_TOP} r="3.5" fill={TAP_HUE} />
+                <circle cx={regX(4)} cy={REG_TOP} r="3.5" fill={TAP_HUE} />
                 <text x="190" y="64" fill={INK} fontSize="10" textAnchor="end">
                     taps
                 </text>
@@ -231,12 +244,22 @@ function OutputTraceDrawing() {
                     fontSize="12"
                     style={{ fontVariantNumeric: "tabular-nums" }}
                 >
-                    {`${current[2]} XOR ${current[3]} = ${feedback}`}
+                    <tspan fill={TAP_HUE} fontWeight="700">
+                        {current[2]}
+                    </tspan>
+                    {" XOR "}
+                    <tspan fill={TAP_HUE} fontWeight="700">
+                        {current[3]}
+                    </tspan>
+                    {" = "}
+                    <tspan fill={FEEDBACK_HUE} fontWeight="700">
+                        {feedback}
+                    </tspan>
                 </text>
                 <path
                     d={`M ${XOR_CENTRE.x - 13} ${XOR_CENTRE.y} H ${regX(0)} V ${REG_TOP - 6}`}
                     fill="none"
-                    stroke={ACCENT}
+                    stroke={FEEDBACK_HUE}
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -272,7 +295,7 @@ function OutputTraceDrawing() {
                     height={REG_CELL}
                     rx="6"
                     fill="#FFFFFF"
-                    stroke={INK_STRUCTURE}
+                    stroke={cellIndex >= 3 ? TAP_HUE : INK_STRUCTURE}
                     strokeWidth="2"
                     opacity={opacityFor("register")}
                     style={{ ...ease, cursor: "pointer" }}
@@ -285,7 +308,7 @@ function OutputTraceDrawing() {
                     <path
                         d={chutePath}
                         fill="none"
-                        stroke={ACCENT}
+                        stroke={OUTPUT_HUE}
                         strokeWidth="9"
                         opacity="0.28"
                         strokeLinecap="round"
@@ -308,11 +331,11 @@ function OutputTraceDrawing() {
                 <path
                     d={chutePath}
                     fill="none"
-                    stroke={isOn("exit") ? ACCENT : INK_QUIET}
+                    stroke={isOn("exit") ? OUTPUT_HUE : INK_QUIET}
                     strokeWidth={isOn("exit") ? 3 : 2}
                     strokeDasharray="6 6"
                     strokeLinecap="round"
-                    markerEnd={isOn("exit") ? "url(#lfsr-trace-arrow-accent)" : "url(#lfsr-trace-arrow)"}
+                    markerEnd={isOn("exit") ? "url(#lfsr-trace-arrow-output)" : "url(#lfsr-trace-arrow)"}
                 />
             </g>
 
@@ -340,7 +363,7 @@ function OutputTraceDrawing() {
                     width="30"
                     height="30"
                     rx="6"
-                    fill={ACCENT}
+                    fill={FEEDBACK_HUE}
                     opacity={0.3 + 0.7 * frac}
                 />
                 <text
@@ -371,7 +394,7 @@ function OutputTraceDrawing() {
                                     height={TAPE_CELL + 8}
                                     rx="8"
                                     fill="none"
-                                    stroke={INK_STRUCTURE}
+                                    stroke={OUTPUT_HUE}
                                     strokeWidth="9"
                                     opacity="0.28"
                                 />
@@ -383,7 +406,7 @@ function OutputTraceDrawing() {
                                 height={TAPE_CELL}
                                 rx="5"
                                 fill="#FFFFFF"
-                                stroke={filled ? INK_STRUCTURE : isTarget ? ACCENT : INK_QUIET}
+                                stroke={filled || isTarget ? OUTPUT_HUE : INK_QUIET}
                                 strokeWidth={filled && isOn("tape") ? 3 : 2}
                                 strokeDasharray={filled ? undefined : "4 4"}
                                 opacity={filled || isTarget ? 1 : 0.55}
@@ -430,7 +453,7 @@ function OutputTraceDrawing() {
                             height="32"
                             rx="7"
                             fill="#FFFFFF"
-                            stroke={ACCENT}
+                            stroke={OUTPUT_HUE}
                             strokeWidth={drag || hovered ? 3.5 : 2.5}
                             filter="url(#lfsr-trace-shadow)"
                             style={{ transition: "stroke-width 150ms ease-out", pointerEvents: "none" }}
@@ -476,7 +499,7 @@ function OutputTraceFigure() {
                 setVar("traceTicks", 0);
                 setVar("traceHighlight", "");
             }}
-            caption="Cells 3 and 4 feed the XOR gate, and its answer waits at the left-hand end. Pull the teal bit out of cell 4: it drops down the dashed chute onto the tape while everything else shifts one place right. Click any cell to change the seed."
+            caption="Cells 3 and 4 feed the XOR gate, and its answer waits at the left-hand end. Pull the amber-ringed bit out of cell 4: it drops down the dashed chute onto the tape while everything else shifts one place right. Click any cell to change the seed."
         >
             <OutputTraceDrawing />
             <InteractionHintSequence
@@ -484,7 +507,7 @@ function OutputTraceFigure() {
                 steps={[
                     {
                         gesture: "drag-horizontal",
-                        label: "Drag the teal bit in cell 4 to the right",
+                        label: "Drag the amber-ringed bit in cell 4 to the right",
                         position: { x: "45%", y: "30%" },
                         dragPath: {
                             type: "line",
@@ -511,14 +534,24 @@ export const lfsrOutputSequenceBlocks: ReactElement[] = [
         <Block id="lfsr-trace-setup" padding="sm">
             <EditableParagraph id="para-lfsr-trace-setup" blockId="lfsr-trace-setup">
                 One tick gives one output bit, and repeating the tick lines those bits up into a
-                sequence, which is all a pseudo-random stream really is. Try a tick now: the
-                teal-ringed bit in cell 4, the last box of the register, is the one about to leave.
+                sequence, which is all a{" "}
+                <InlineTooltip
+                    id="tooltip-lfsr-trace-pseudo-random"
+                    tooltip="Looks random, but is made by a fixed rule, so the same start always gives the same bits."
+                    color={TOOLTIP_HUE}
+                    bgColor={TOOLTIP_SOFT}
+                >
+                    pseudo-random
+                </InlineTooltip>{" "}
+                stream really is. Try a tick now: the amber-ringed bit in cell 4, the last box of the register, is the one about to leave.
                 Drag it to the right and it{" "}
                 <InlineLinkedHighlight
                     id="link-lfsr-trace-exit"
                     varName="traceHighlight"
                     highlightId="exit"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("traceHighlight"))}
+                    color={OUTPUT_HUE}
+                    bgColor={OUTPUT_SOFT}
                 >
                     rides the dashed chute
                 </InlineLinkedHighlight>{" "}
@@ -544,6 +577,8 @@ export const lfsrOutputSequenceBlocks: ReactElement[] = [
                     varName="traceHighlight"
                     highlightId="tape"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("traceHighlight"))}
+                    color={OUTPUT_HUE}
+                    bgColor={OUTPUT_SOFT}
                 >
                     tape
                 </InlineLinkedHighlight>{" "}
@@ -552,9 +587,36 @@ export const lfsrOutputSequenceBlocks: ReactElement[] = [
                     varName="traceTicks"
                     {...numberPropsFromDefinition(getVariableInfo("traceTicks"))}
                 />{" "}
-                bits so far. The first four carry no new information: that is the seed itself
-                walking out, right-hand cell first. Only from the fifth tick does the XOR gate
-                contribute bits the seed never held. Click any cell to try a different seed.
+                bits so far. The{" "}
+                <InlineTrigger
+                    id="trigger-lfsr-trace-first-four"
+                    varName="traceTicks"
+                    value={4}
+                    color={OUTPUT_HUE}
+                    bgColor={OUTPUT_SOFT}
+                >
+                    first four
+                </InlineTrigger>{" "}
+                carry no new information: that is the{" "}
+                <InlineTooltip
+                    id="tooltip-lfsr-trace-seed"
+                    tooltip="The starting pattern of bits loaded into the register before the first tick."
+                    color={TOOLTIP_HUE}
+                    bgColor={TOOLTIP_SOFT}
+                >
+                    seed
+                </InlineTooltip>{" "}
+                itself walking out, right-hand cell first. Only from the{" "}
+                <InlineTrigger
+                    id="trigger-lfsr-trace-fifth-tick"
+                    varName="traceTicks"
+                    value={5}
+                    color={OUTPUT_HUE}
+                    bgColor={OUTPUT_SOFT}
+                >
+                    fifth tick
+                </InlineTrigger>{" "}
+                does the XOR gate contribute bits the seed never held. Click any cell to try a different seed.
             </EditableParagraph>
         </Block>
     </StackLayout>,

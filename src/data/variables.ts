@@ -85,6 +85,29 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
     // LESSON: Linear Feedback Shift Registers
     // ========================================
 
+    // ── Lesson-wide quantity colours (match lfsrModel.ts hues) ─────
+    lfsrTappedCells: {
+        defaultValue: 'tapped cells',
+        type: 'spotColor',
+        label: 'Tapped cells',
+        description: 'Colour of the tapped cells and their wires into the XOR gate',
+        color: '#F8A0CD',
+    },
+    lfsrFeedbackBit: {
+        defaultValue: 'feedback bit',
+        type: 'spotColor',
+        label: 'Feedback bit',
+        description: 'Colour of the bit the XOR gate sends back in at the left',
+        color: '#62D0AD',
+    },
+    lfsrOutputBit: {
+        defaultValue: 'output bit',
+        type: 'spotColor',
+        label: 'Output bit',
+        description: 'Colour of the bit leaving on the right and of the output tape',
+        color: '#F7B23B',
+    },
+
     // ── Section 2 — One Clock Tick ────────────────────────────────
     tickFeedbackDrop: {
         defaultValue: 'none',
@@ -134,7 +157,7 @@ export const variableDefinitions: Record<string, VariableDefinition> = {
         min: 0,
         max: 10,
         step: 1,
-        color: '#62D0AD',
+        color: '#F7B23B',
     },
     traceHighlight: {
         defaultValue: '',

@@ -7,8 +7,10 @@ import {
     InlineClozeChoice,
     InlineClozeInput,
     InlineFeedback,
+    InlineFormula,
     InlineLinkedHighlight,
     InlineScrubbleNumber,
+    InlineTrigger,
     InteractionHintSequence,
 } from "@/components/atoms";
 import { Figure } from "@/components/molecules";
@@ -16,10 +18,13 @@ import { useVar, useSetVar } from "@/stores";
 import { clamp, useSpring } from "@/lib/motion";
 import {
     ACCENT,
+    ACCENT_SOFT,
     INK,
     INK_QUIET,
     INK_STRUCTURE,
-    SECOND_ACCENT,
+    OUTPUT_HUE,
+    PREDICTION_HUE,
+    PREDICTION_SOFT,
     bitsToString,
     outputBit,
     periodOf,
@@ -208,8 +213,9 @@ function StateTrailDrawing() {
                             <text
                                 x={colX(tick)}
                                 y={TRAIL_BOTTOM + 20}
-                                fill={INK}
+                                fill={OUTPUT_HUE}
                                 fontSize="12"
+                                fontWeight="700"
                                 textAnchor="middle"
                                 style={{ fontVariantNumeric: "tabular-nums" }}
                             >
@@ -251,7 +257,7 @@ function StateTrailDrawing() {
                     y1={90}
                     x2={flagX}
                     y2={TRAIL_BOTTOM + 6}
-                    stroke={SECOND_ACCENT}
+                    stroke={PREDICTION_HUE}
                     strokeWidth={isOn("flag") ? 3 : 2}
                     strokeDasharray="4 5"
                     strokeLinecap="round"
@@ -260,10 +266,10 @@ function StateTrailDrawing() {
                 <g transform={`translate(${flagX} 76) scale(${flagScale})`}>
                     <path
                         d="M 0 -14 L 20 -7 L 0 0 Z"
-                        fill={SECOND_ACCENT}
+                        fill={PREDICTION_HUE}
                         filter="url(#lfsr-cycle-shadow)"
                     />
-                    <line x1="0" y1="-16" x2="0" y2="14" stroke={SECOND_ACCENT} strokeWidth="3" strokeLinecap="round" />
+                    <line x1="0" y1="-16" x2="0" y2="14" stroke={PREDICTION_HUE} strokeWidth="3" strokeLinecap="round" />
                 </g>
                 <circle
                     cx={flagX}
@@ -281,7 +287,7 @@ function StateTrailDrawing() {
                 <text
                     x={prediction > 12 ? flagX - 8 : flagX + 26}
                     y={70}
-                    fill={SECOND_ACCENT}
+                    fill={PREDICTION_HUE}
                     fontSize="10"
                     textAnchor={prediction > 12 ? "end" : "start"}
                     style={{ fontVariantNumeric: "tabular-nums" }}
@@ -432,6 +438,8 @@ export const lfsrPeriodBlocks: ReactElement[] = [
                     varName="cycleHighlight"
                     highlightId="flag"
                     {...linkedHighlightPropsFromDefinition(getVariableInfo("cycleHighlight"))}
+                    color={PREDICTION_HUE}
+                    bgColor={PREDICTION_SOFT}
                 >
                     Your flag
                 </InlineLinkedHighlight>{" "}
@@ -440,8 +448,23 @@ export const lfsrPeriodBlocks: ReactElement[] = [
                     varName="cyclePrediction"
                     {...numberPropsFromDefinition(getVariableInfo("cyclePrediction"))}
                 />
-                . The pattern itself returns at tick 15, having visited every state except all
-                zeros, each one exactly once. Four cells can therefore never yield more than 15
+                . The pattern itself returns at{" "}
+                <InlineTrigger
+                    id="trigger-lfsr-cycle-return-tick"
+                    varName="cycleReveal"
+                    value={15}
+                    color={ACCENT}
+                    bgColor={ACCENT_SOFT}
+                >
+                    tick 15
+                </InlineTrigger>
+                , having visited every state except all zeros, each one exactly once. Four cells
+                can therefore never yield more than{" "}
+                <InlineFormula
+                    id="formula-lfsr-cycle-reflect-maximum"
+                    latex="2^4 - 1 = \clr{period}{15}"
+                    colorMap={{ period: ACCENT }}
+                />{" "}
                 bits before repeating, and choosing taps that reach that maximum is the whole
                 design problem.
             </EditableParagraph>
